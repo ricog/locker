@@ -1,0 +1,8 @@
+{
+	"name": "ricog/locker",
+	"description": "Provision PHP projects using Docker and Docker Compose",
+	"license": "MIT",
+	"bin": [
+		"locker"
+	]
+}

@@ -1,0 +1,154 @@
+#!/usr/bin/env php
+<?php
+
+//----------
+function usage() {
+	$script = basename(__FILE__);
+	echo <<<EOT
+
+${script} [command] [target] [source_directory]
+	Manages Docker containers for PHP environments.
+
+Usage:
+    bin/${script}
+
+	command:
+		Command to run. One of:
+
+		start (or up) - starts all containers
+		stop (or down) - stops all containers
+		restart - stops and starts all containers
+		update - keeps containers running, but updates the code and/or db
+		login - logs into the data container
+
+	target (optional):
+		Target Docker environment to act upon. If no target is provided, the
+		default (usually development) is assumed.
+
+	source_directory (optional):
+		If a source directory is provided, the commands will run within that
+		directory. This is useful for the `docker-compose` configuration paths.
+		If no `source_directory` is given, the current working directory is
+		assumed.
+
+EOT;
+
+	exit(0);
+}
+
+$commands = [
+	'start' => ['start', 'up'],
+	'stop' => ['stop', 'down'],
+	'restart',
+	'update',
+	'login',
+];
+
+$compose = [
+	'filename' => 'locker',
+	'extension' => '.yml',
+];
+
+$command = command($argv, $commands);
+$workingDir = workingDir($argv);
+$target = target($argv, $compose, $workingDir);
+
+chdir($workingDir);
+//establishTarget($target);
+call_user_func('run_' . $command, $target);
+//resetTarget();
+
+exit;
+
+function run_start($target) {
+	$dockerCommand = dockerCommand($target);
+	echo 'starting...' . PHP_EOL;
+	exec($dockerCommand . 'up -d data');
+	exec($dockerCommand . 'up -d mysql');
+	exec($dockerCommand . 'up -d --no-deps php');
+	exec($dockerCommand . 'up -d --no-deps web');
+	exec($dockerCommand . 'up -d --no-deps mysqlinit');
+}
+
+function run_stop($target) {
+	$dockerCommand = dockerCommand($target);
+	echo 'stopping...' . PHP_EOL;
+	exec($dockerCommand . 'stop');
+	exec($dockerCommand . 'rm --force');
+}
+
+function run_restart($target) {
+	run_stop($target);
+	run_start($target);
+}
+
+function run_update($target) {
+	$dockerCommand = dockerCommand($target);
+	echo 'updating...' . PHP_EOL;
+	echo 'not implemented yet' . PHP_EOL;
+}
+
+function run_login($target) {
+	$dockerCommand = dockerCommand($target);
+	//echo 'logged in...' . PHP_EOL;
+	//echo 'data-shell# ';
+	//docker run -it --rm --volumes-from serenity_data_1 serenity_data bash
+	echo $dockerCommand . ' run --rm data bash';
+}
+
+function dockerCommand($target) {
+	$dockerCommand = 'fig';
+	$dockerCommand .= ' -f ' . $target . ' ';
+	return $dockerCommand;
+}
+
+function workingDir($argv) {
+	if (!isset($argv[3])) {
+		return getcwd();
+	}
+
+	$param = $argv[3];
+	if (!is_dir($param)) {
+		echo 'Invalid working directory given as third value.' . PHP_EOL;
+		exit(1);
+	}
+
+	return $param;
+}
+
+function target($argv, $compose, $workingDir) {
+	//TODO - find a way to allow excluding targed and still specifying workingDir
+	$target = $compose['filename'] . $compose['extension'];
+	if (!empty($argv[2])) {
+		$target = $compose['filename'] . '-' .  $argv[2] . $compose['extension'];
+	}
+
+	if (is_file($workingDir . '/' . $target)) {
+		return $target;
+	}
+	if (is_file($workingDir . '/locker/' . $target)) {
+		return 'locker/' . $target;
+	}
+
+	echo 'Config file "' .$workingDir . '/' .  $target . '" is missing.' . PHP_EOL;
+	exit(1);
+}
+
+function command($argv, $commands) {
+	if (!isset($argv[1]) || $argv[1] == '-h') {
+		usage();
+	}
+
+	$param = $argv[1];
+	foreach ($commands as $key => $command) {
+		if (is_array($command) && in_array($param, $command)) {
+			return $key;
+		}
+		if ($param === $command) {
+			return $command;
+		}
+	}
+
+	echo 'Invalid command "' . $param . '".' . PHP_EOL;
+	exit(1);
+}

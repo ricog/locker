@@ -1,0 +1,36 @@
+data:
+  image: ricog/composer-data
+  volumes:
+    - /var/www/site
+  command: '/build_app.sh user/repo my-branch'
+mysql:
+  image: mysql:5.6
+  environment:
+    MYSQL_ROOT_PASSWORD: password
+    MYSQL_USER: docker
+    MYSQL_PASSWORD: docker
+    MYSQL_DATABASE: docker
+  command: 'mysqld --datadir=/var/lib/mysql --user=mysql --sql-mode="NO_ENGINE_SUBSTITUTION"'
+mysqlinit:
+  image: mysql:5.6
+  links:
+    - mysql
+  volumes_from:
+    - data
+  command: sh -c 'SQL_PATH=/var/www/site/config/sql; while [ ! -d $SQL_PATH ]; do sleep 1; done; cat $SQL_PATH/database.sql $SQL_PATH/test_data.sql | mysql -h"$MYSQL_PORT_3306_TCP_ADDR" -P"$MYSQL_PORT_3306_TCP_PORT" -uroot -p"$MYSQL_ENV_MYSQL_ROOT_PASSWORD" docker'
+php:
+  image: ricog/cakephp
+  links:
+    - mysql
+  volumes_from:
+    - data
+web:
+  image: ricog/nginx-php:1.9
+  environment:
+    APP_ENV: staging
+  links:
+    - php
+  volumes_from:
+    - data
+  ports:
+    - "80:80"
