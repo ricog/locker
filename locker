@@ -45,7 +45,7 @@ $commands = [
 ];
 
 $compose = [
-	'filename' => 'locker',
+	'filename' => 'docker-compose',
 	'extension' => '.yml',
 ];
 
@@ -97,7 +97,7 @@ function run_login($target) {
 }
 
 function dockerCommand($target) {
-	$dockerCommand = 'fig';
+	$dockerCommand = 'docker-compose';
 	$dockerCommand .= ' -f ' . $target . ' ';
 	return $dockerCommand;
 }
@@ -126,8 +126,8 @@ function target($argv, $compose, $workingDir) {
 	if (is_file($workingDir . '/' . $target)) {
 		return $target;
 	}
-	if (is_file($workingDir . '/locker/' . $target)) {
-		return 'locker/' . $target;
+	if (is_file($workingDir . '/docker/' . $target)) {
+		return 'docker/' . $target;
 	}
 
 	echo 'Config file "' .$workingDir . '/' .  $target . '" is missing.' . PHP_EOL;
