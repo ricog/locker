@@ -63,10 +63,12 @@ exit;
 function run_start($target) {
 	$dockerCommand = dockerCommand($target);
 	echo 'starting...' . PHP_EOL;
-	exec($dockerCommand . 'up -d data');
-	exec($dockerCommand . 'up -d mysql');
+	exec($dockerCommand . 'up -d --no-deps data');
+	exec($dockerCommand . 'up -d --no-deps mysql');
 	exec($dockerCommand . 'up -d --no-deps php');
 	exec($dockerCommand . 'up -d --no-deps web');
+	echo 'pausing for 10 seconds...' . PHP_EOL;
+	sleep(10);
 	exec($dockerCommand . 'up -d --no-deps mysqlinit');
 }
 
@@ -93,7 +95,7 @@ function run_login($target) {
 	//echo 'logged in...' . PHP_EOL;
 	//echo 'data-shell# ';
 	//docker run -it --rm --volumes-from serenity_data_1 serenity_data bash
-	echo $dockerCommand . ' run --rm data bash';
+	echo $dockerCommand . ' run --rm --no-deps php bash';
 }
 
 function dockerCommand($target) {
@@ -117,7 +119,7 @@ function workingDir($argv) {
 }
 
 function target($argv, $compose, $workingDir) {
-	//TODO - find a way to allow excluding targed and still specifying workingDir
+	//TODO - find a way to allow excluding target and still specifying workingDir
 	$target = $compose['filename'] . $compose['extension'];
 	if (!empty($argv[2])) {
 		$target = $compose['filename'] . '-' .  $argv[2] . $compose['extension'];
